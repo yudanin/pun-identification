@@ -1,0 +1,17 @@
+# PIE - Pun Identification Engine
+# Requirements for PythonAnywhere deployment
+
+# Core dependencies
+flask>=3.0.0
+anthropic>=0.40.0
+
+# NLP libraries
+spacy>=3.7.0
+nltk>=3.8.0
+
+# Optional: For production
+gunicorn>=21.0.0
+
+# Note: After installing, run these commands:
+# python -m spacy download en_core_web_sm
+# python -c "import nltk; nltk.download('framenet_v17')"

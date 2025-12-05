@@ -1,0 +1,25 @@
+# Example sentences for PIE testing
+# Each line is a sentence to analyze
+
+# Homophonic puns
+Atheism is a non-prophet institution.
+I used to be a banker, but I lost interest.
+When the cannibal showed up late to the party, they gave him the cold shoulder.
+
+# Homographic puns
+My shoe is a foot long.
+Time flies like an arrow; fruit flies like a banana.
+I'm reading a book about anti-gravity. It's impossible to put down.
+
+# Recursive puns
+Immanuel doesn't pun, he Kant.
+A Freudian slip is when you say one thing and mean your mother.
+
+# Antanaclasis
+We must, indeed, all hang together or, most assuredly, we shall all hang separately.
+If you aren't fired with enthusiasm, you will be fired with enthusiasm.
+Your argument is sound, nothing but sound.
+
+# No pun (control)
+The quick brown fox jumps over the lazy dog.
+I went to the store to buy some groceries.

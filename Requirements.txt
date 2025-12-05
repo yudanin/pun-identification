@@ -1,0 +1,66 @@
+1. Functionality
+
+Identify puns:
+    - Receive a sentence
+    - Decide whether it has a pun or not
+    - Return:
+       - Decision (1 - has one or more puns, 0 - has no puns)
+       - For each word/expression that is a pun:
+          - Word/expression
+          - Type of pun
+          - Frame distance
+          - Frame explanation
+          - Explanation
+
+
+- Types of pun: 
+
+1) Homophonic puns (similar-sounding words)   
+Example: ‘atheism is a non-prophet institution’
+
+2) Homographic puns (same spelling, different meanings)
+Example: ‘my shoe is a foot long’
+
+3) Recursive puns (term-dependent / self-referential twists)
+Example: ‘Immanuel doesn't pun, he Kant’
+
+Antanaclasis (same word repeated with different senses)
+Example: ‘We must, indeed, all hang together or, most assuredly, we shall all hang separately.’
+
+
+Validation:
+We will use:
+- Distributional Semantics Validation: to verify if both senses are plausibly activated
+- Substitution Test: whether we can substitute one sense for another and maintain grammatical/semantic coherence
+- Frame distance measures in FrameNet, to measure how far away are the frames the pun-creating word is used
+
+
+
+
+2. Architecture
+
+- Will use:
+  - Claude LLM's API, for analysis and explanation
+  - FrameNet for deciding about frame distance and providing Frame explanation
+  - spaCy Python library and FrameNet for validations
+  - Claude LLM to validate sense assignments.
+
+The system will have two parts:
+
+1) PIE: Pun Identification Engine
+    - Analyze the text for puns
+    - Provide an API for PUI and other possible clients
+
+2) PUI: Pun UI that will enable the user to -
+    - Submit the sentence(s) for analysis
+    - Inspect the results
+
+- Programming language: Python
+
+- Hosting - pythonanywhere.com
+
+
+
+TBD:
+
+Database for user requests and system responses
