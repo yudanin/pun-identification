@@ -179,5 +179,32 @@ def main():
         sys.exit(1)
 
 
+def test():
+    # sentence_to_analyze = "Atheism is a non-prophet institution."
+    sentence_to_analyze = "my shoe is a foot long"
+
+    from pie import PunIdentificationEngine
+
+    engine = PunIdentificationEngine()
+    result = engine.analyze(sentence_to_analyze)
+
+    print(f"Has pun: {result.has_pun}")
+    for pun in result.puns:
+        print(f"Word: {pun.word_or_expression}")
+        print(f"Type: {pun.pun_type}")
+        print(f"Sense 1: {pun.sense1}")
+        print(f"Sense 2: {pun.sense2}")
+        if pun.frame_distance:
+            print(f"Frame distance: {pun.frame_distance.distance}")
+            print(f"Frame explanation: {pun.frame_distance.explanation}")
+            if pun.frame_distance.sense1_frame:
+                print(f"Frame 1: {pun.frame_distance.sense1_frame.frame_name}")
+            if pun.frame_distance.sense2_frame:
+                print(f"Frame 2: {pun.frame_distance.sense2_frame.frame_name}")
+        print(f"Explanation: {pun.explanation}")
+
+
 if __name__ == '__main__':
     main()
+    # test()
+
