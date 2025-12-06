@@ -8,8 +8,8 @@ A system for identifying and analyzing puns using:
 - Distributional semantics for validation
 """
 
-__version__ = "0.1.0"
-__author__ = "PIE Development Team"
+__version__ = "0.0.1"
+__author__ = "Michael Yudanin, yudanin@hotmail.com"
 
 from .engine import PunIdentificationEngine
 from .models import PunAnalysisResult, PunInstance, PunType

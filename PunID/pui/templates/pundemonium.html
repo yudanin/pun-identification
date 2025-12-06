@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pun Analyzer - Pundemonium</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>PIE - Pun Identification Engine</h1>
+        <p>A Linguistic Analysis Tool Powered by Claude & FrameNet</p>
+    </header>
+
+    <main>
+        <section id="input-section">
+            <h2>Submit Sentence(s)</h2>
+            <p>Enter one or more sentences below (one per line). Maximum 10 sentences for batch analysis.</p>
+            <textarea id="sentence-input" placeholder="Example: Atheism is a non-prophet institution."></textarea>
+            <button id="analyze-button" onclick="analyzeSentences()">Analyze Pun(s)</button>
+        </section>
+
+        <!-- <section id="results-section">
+            <h2>Analysis Results</h2>
+            <div id="status-message" class="loading-message">
+                <div id="loading-spinner"></div>
+                <p id="fact-display" class="loading-message"></p>
+            </div>
+            <pre id="json-output"></pre>
+        </section> -->
+        <section id="results-section">
+            <h2>Analysis Results</h2>
+
+            <div id="final-status-message" class="status-message info">
+                Results will appear here after analysis.
+            </div>
+
+            <pre id="json-output"></pre>
+        </section>
+
+    </main>
+
+    <div id="loading-overlay" class="hidden">
+        <div id="loading-box">
+            <div id="loading-spinner"></div>
+            <p id="fact-display"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL CONSTANTS ---
+        // Using relative path fixes the API URL issue
+        const API_BASE = "";
+        const FACT_INTERVAL = 7000; // 7 seconds
+        let rotationIntervalId = null;
+        let currentFactIndex = 0;
+
+        const PUN_FACTS = [
+            // ... (All 10 facts go here) ...
+            "Puns are ancient: Puns were used in ancient civilizations like Mesopotamia (around 2500 BC), Egypt, and by the Maya for everything from religious myths to hieroglyphic writing.",
+            "Shakespeare loved them: William Shakespeare, one of the greatest writers in the English language, used puns frequently in his works, including many explicit jokes and clever wordplay.",
+            "English is great for puns: The English language's vast vocabulary (borrowed from many other languages) and lack of word declensions make it especially fertile ground for wordplay and puns.",
+            "There are several types: Puns can be homophonic (words that sound the same but have different meanings, like 'Czech' and 'check'), homographic (words spelled the same but sound different), homonymic (same sound and spelling), or portmanteaus (combined words like 'brunch').",
+            "Brain activity is unique: When someone understands a funny pun, a specific region in the brain called the inferior frontal gyrus (IFG) shows increased activity, suggesting a unique neurological process is involved in 'getting' the joke.",
+            "Computers struggle with them: Replicating the human ability to create puns is very difficult for artificial intelligence, as it requires complex understanding of context, multiple meanings, and sound associations that algorithms find hard to manage.",
+            "Bob's Burgers has a quota: The writers for the animated TV show Bob's Burgers must include three or four pun options for the 'Burger of the Day,' the store next door, and the exterminator van for every episode script.",
+            "They're not just for humor: While often used to make people laugh, puns also serve rhetorical purposes in literature and speech, such as adding emphasis, aiding memorability, or developing a character's wit.",
+            "The biggest competition is a 'Pun-Off': The O. Henry Pun-Off World Championships is an annual competition held in Austin, Texas, featuring strict rules and two main events: 'Punniest of Show' (monologues) and 'Punslingers' (rapid-fire duels).",
+            "They were once out of vogue: In the century after Shakespeare, prominent figures like John Dryden and Samuel Johnson derided puns, with Johnson famously calling them 'the lowest form of humor'."
+        ];
+
+        // --- DOM ELEMENT REFERENCES (CONSOLIDATED) ---
+        const outputElement = document.getElementById('json-output');
+        //const statusContainer = document.getElementById('status-container');
+        const loadingOverlay = document.getElementById('loading-overlay'); // <-- NEW
+        const factDisplay = document.getElementById('fact-display');
+
+        const button = document.getElementById('analyze-button');
+        const finalStatusMessageElement = document.getElementById('final-status-message');
+
+        // --- UTILITY FUNCTIONS ---
+
+        function updateStatus(message, type = 'info') {
+            // This function will now update the element *below* the input area
+            // when the loading overlay disappears.
+            finalStatusMessageElement.textContent = message;
+            finalStatusMessageElement.className = `status-message ${type}`;
+        }
+
+        function startRotation() {
+            loadingOverlay.classList.remove('hidden'); // SHOW the overlay
+            factDisplay.classList.add('loading');
+            outputElement.textContent = "";
+
+            function rotateFact() {
+                factDisplay.textContent = PUN_FACTS[currentFactIndex];
+                currentFactIndex = (currentFactIndex + 1) % PUN_FACTS.length;
+            }
+
+            rotateFact();
+            rotationIntervalId = setInterval(rotateFact, FACT_INTERVAL);
+        }
+
+        function stopRotation(isSuccess = true) {
+            clearInterval(rotationIntervalId);
+            rotationIntervalId = null;
+
+            // Hide the overlay
+            loadingOverlay.classList.add('hidden');
+
+            if (isSuccess) {
+                console.log("Analysis complete.");
+            } else {
+                console.error("Analysis failed.");
+            }
+        }
+
+        // --- MAIN ANALYSIS FUNCTION ---
+
+        async function analyzeSentences() {
+            const input = document.getElementById('sentence-input').value;
+            const sentences = input.split('\n').map(s => s.trim()).filter(s => s !== '');
+
+            if (sentences.length === 0) {
+                updateStatus("Please enter at least one sentence.", 'error');
+                return;
+            }
+
+            const isBatch = sentences.length > 1;
+            // Removed API_BASE since it's an empty string.
+            const url = isBatch ? `/analyze/batch` : `/analyze`;
+            const body = isBatch ? { sentences: sentences } : { sentence: sentences[0] };
+
+            button.disabled = true;
+            startRotation(); // Start the spinner and fact rotation
+
+            let success = false;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                outputElement.textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    success = true;
+                } else {
+                    // Display error from API
+                    outputElement.textContent = `API Error: ${response.status} ${data.error}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                // Display network error
+                outputElement.textContent = `NETWORK ERROR: ${error.message}`;
+            } finally {
+                stopRotation(success); // Stop the spinner and display final status
+                button.disabled = false;
+                // statusContainer.classList.remove('hidden'); // Removed this redundant line
+            }
+        }
+    </script>
+
+</body>
+</html>

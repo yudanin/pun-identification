@@ -126,18 +126,18 @@ def main():
     
     args = parser.parse_args()
     
-    # Get API key
-    api_key = args.api_key or os.environ.get('ANTHROPIC_API_KEY')
-    
-    if not api_key:
-        print("Error: No API key provided.")
-        print("Set ANTHROPIC_API_KEY environment variable or use --api-key option.")
-        sys.exit(1)
+    # # Get API key
+    # api_key = args.api_key or os.environ.get('ANTHROPIC_API_KEY')
+    #
+    # if not api_key:
+    #     print("Error: No API key provided.")
+    #     print("Set ANTHROPIC_API_KEY environment variable or use --api-key option.")
+    #     sys.exit(1)
     
     # Initialize engine
     try:
         engine = PunIdentificationEngine(
-            api_key=api_key,
+            #api_key=api_key,
             validate=not args.no_validate
         )
     except Exception as e:
@@ -183,6 +183,8 @@ def test():
     # sentence_to_analyze = "Atheism is a non-prophet institution."
     sentence_to_analyze = "my shoe is a foot long"
 
+    print(sentence_to_analyze)
+
     from pie import PunIdentificationEngine
 
     engine = PunIdentificationEngine()
@@ -205,6 +207,6 @@ def test():
 
 
 if __name__ == '__main__':
-    main()
-    # test()
+    #main()
+    test()
 

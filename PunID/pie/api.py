@@ -1,15 +1,16 @@
 """
 Flask API for PIE - Pun Identification Engine
 
-Provides REST endpoints for pun analysis.
+Provides REST endpoints for pun analysis and serves the UI.
 """
 
 import os
 import logging
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 from functools import wraps
 
-from pie import PunIdentificationEngine
+# Assuming engine is correctly imported from the same package
+from .engine import PunIdentificationEngine
 
 # Configure logging
 logging.basicConfig(
@@ -18,25 +19,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create Flask app
-app = Flask(__name__)
+# --- GLOBAL PATHS (Determines location of UI files) ---
+
+# 1. Define the base directory (PunID/) dynamically relative to the current file (PunID/pie/api.py)
+# os.pardir moves up one level from 'pie' to 'PunID'
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+UI_TEMPLATE_PATH = os.path.join(BASE_DIR, 'pui', 'templates')
+UI_STATIC_PATH = os.path.join(BASE_DIR, 'pui', 'static')
+
+# --- GLOBAL APP INSTANCE (Used by all decorators) ---
+
+# 2. Instantiate the Flask app globally with custom paths
+app = Flask(
+    __name__,
+    template_folder=UI_TEMPLATE_PATH,
+    static_folder=UI_STATIC_PATH
+)
 app.config['JSON_SORT_KEYS'] = False
 
-# Initialize engine (API key can be set later)
+# Initialize engine globally
 engine = None
 
+
+# --- ENGINE MANAGEMENT ---
 
 def get_engine():
     """Get or create the PIE engine."""
     global engine
     if engine is None:
-        api_key = os.environ.get('ANTHROPIC_API_KEY')
-        if api_key:
-            engine = PunIdentificationEngine(api_key=api_key)
-            logger.info("PIE engine initialized with API key from environment")
+        # NOTE: Relying on engine.__init__ to read the claudeapikey file
+        engine = PunIdentificationEngine()
+        if not engine.is_configured:
+            logger.warning("PIE engine created but not configured (missing API key).")
         else:
-            engine = PunIdentificationEngine()
-            logger.warning("PIE engine created without API key")
+            logger.info("PIE engine initialized successfully.")
     return engine
 
 
@@ -48,31 +64,29 @@ def require_configured(f):
         if not eng.is_configured:
             return jsonify({
                 "error": "Engine not configured",
-                "message": "Set ANTHROPIC_API_KEY environment variable or call /configure endpoint"
+                "message": "API key file not found or LLM client failed to initialize."
             }), 503
         return f(*args, **kwargs)
     return decorated
 
 
 # =============================================================================
-# API Endpoints
+# UI Endpoints
 # =============================================================================
 
 @app.route('/', methods=['GET'])
-def index():
-    """API information endpoint."""
-    return jsonify({
-        "name": "PIE - Pun Identification Engine",
-        "version": "0.1.0",
-        "endpoints": {
-            "GET /": "This information",
-            "GET /status": "Engine status",
-            "POST /configure": "Configure API key",
-            "POST /analyze": "Analyze a sentence for puns",
-            "POST /analyze/batch": "Analyze multiple sentences"
-        }
-    })
+def index_redirect():
+    """Redirects root path to the UI."""
+    return redirect(url_for('ui'))
 
+@app.route('/pundemonium', methods=['GET'])
+def ui():
+    """Serves the main single-page application UI from /pui/templates/."""
+    return render_template('pundemonium.html')
+
+# =============================================================================
+# API Endpoints
+# =============================================================================
 
 @app.route('/status', methods=['GET'])
 def status():
@@ -88,13 +102,13 @@ def status():
 def configure():
     """Configure the engine with an API key."""
     data = request.get_json()
-    
+
     if not data or 'api_key' not in data:
         return jsonify({
             "error": "Missing api_key",
             "message": "Provide 'api_key' in request body"
         }), 400
-    
+
     try:
         eng = get_engine()
         eng.set_api_key(data['api_key'])
@@ -115,12 +129,12 @@ def configure():
 def analyze():
     """
     Analyze a sentence for puns.
-    
+
     Request body:
     {
         "sentence": "The sentence to analyze"
     }
-    
+
     Response:
     {
         "sentence": "...",
@@ -130,27 +144,27 @@ def analyze():
     }
     """
     data = request.get_json()
-    
+
     if not data or 'sentence' not in data:
         return jsonify({
             "error": "Missing sentence",
             "message": "Provide 'sentence' in request body"
         }), 400
-    
+
     sentence = data['sentence'].strip()
-    
+
     if not sentence:
         return jsonify({
             "error": "Empty sentence",
             "message": "Sentence cannot be empty"
         }), 400
-    
+
     if len(sentence) > 5000:
         return jsonify({
             "error": "Sentence too long",
             "message": "Maximum sentence length is 5000 characters"
         }), 400
-    
+
     try:
         eng = get_engine()
         result = eng.analyze(sentence)
@@ -168,12 +182,12 @@ def analyze():
 def analyze_batch():
     """
     Analyze multiple sentences for puns.
-    
+
     Request body:
     {
         "sentences": ["sentence1", "sentence2", ...]
     }
-    
+
     Response:
     {
         "results": [
@@ -184,27 +198,27 @@ def analyze_batch():
     }
     """
     data = request.get_json()
-    
+
     if not data or 'sentences' not in data:
         return jsonify({
             "error": "Missing sentences",
             "message": "Provide 'sentences' array in request body"
         }), 400
-    
+
     sentences = data['sentences']
-    
+
     if not isinstance(sentences, list):
         return jsonify({
             "error": "Invalid format",
             "message": "'sentences' must be an array"
         }), 400
-    
+
     if len(sentences) > 10:
         return jsonify({
             "error": "Too many sentences",
             "message": "Maximum 10 sentences per batch request"
         }), 400
-    
+
     try:
         eng = get_engine()
         results = eng.analyze_batch(sentences)
@@ -218,7 +232,6 @@ def analyze_batch():
             "message": str(e)
         }), 500
 
-
 # =============================================================================
 # Error Handlers
 # =============================================================================
@@ -227,11 +240,10 @@ def analyze_batch():
 def bad_request(e):
     return jsonify({"error": "Bad request", "message": str(e)}), 400
 
-
 @app.errorhandler(404)
 def not_found(e):
+    # This must be defined globally, not inside create_app
     return jsonify({"error": "Not found", "message": "Endpoint not found"}), 404
-
 
 @app.errorhandler(500)
 def internal_error(e):
@@ -239,11 +251,11 @@ def internal_error(e):
 
 
 # =============================================================================
-# Main Entry Point
+# Main Entry Point (WSGI Compatibility)
 # =============================================================================
 
+# This is the function the WSGI server calls, returning the globally configured app.
 def create_app():
-    """Factory function for creating the Flask app."""
     return app
 
 
@@ -251,5 +263,6 @@ if __name__ == '__main__':
     # Development server
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
-    
+
+    # Must use the globally defined app
     app.run(host='0.0.0.0', port=port, debug=debug)

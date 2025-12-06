@@ -96,24 +96,35 @@ class PunIdentificationEngine:
         self._framenet_service = FrameNetService()
         self._validator = PunValidator()
 
-        # Try to get API key from: 1) parameter, 2) file, 3) environment variable
-        resolved_api_key = api_key
-
-        if not resolved_api_key and api_key_file:
+        # 1. ALWAYS attempt to read the API key from the file first and only.
+        if api_key_file:
             resolved_api_key = self._read_api_key_from_file(api_key_file)
 
+        # 2. If the file reading fails, raise an explicit error.
         if not resolved_api_key:
-            import os
-            resolved_api_key = os.environ.get('ANTHROPIC_API_KEY')
+            raise RuntimeError(
+                f"Error: No API key provided. Failed to read key from file: '{api_key_file}'."
+            )
 
-        if resolved_api_key:
-            self._init_client(resolved_api_key)
+        self._init_client(resolved_api_key)
 
     def _read_api_key_from_file(self, filepath: str) -> Optional[str]:
-        """Read API key from a file in the project root."""
+        """Read API key from a file, guaranteed to be in the project root."""
         import os
+        from pathlib import Path
 
-        path = os.path.join(os.path.dirname(__file__), '..', '..', filepath)
+        # 1. Get the path to the current file (engine.py) and resolve any symbolic links
+        engine_file_path = Path(__file__).resolve()
+
+        # 2. Get the project root path (PunID/) by going up two levels:
+        #    engine.py (1) -> pie/ (2) -> PunID/
+        project_root = engine_file_path.parent.parent
+
+        # 3. Join the root with the target filename
+        path = project_root / filepath
+
+        print(f"Attempting to read key from: {path}")  # Use this to verify the path
+
         try:
             with open(path, 'r') as f:
                 return f.read().strip()
@@ -124,14 +135,16 @@ class PunIdentificationEngine:
     def _init_client(self, api_key: str):
         """Initialize the Anthropic client."""
         try:
-            import anthropic
-            self._client = anthropic.Anthropic(api_key=api_key)
+            from anthropic import Anthropic
+            self._client = Anthropic(api_key=api_key)
             self._validator.set_anthropic_client(self._client)
-            logger.info("Anthropic client initialized")
+            logger.info("Anthropic client initialized successfully.")
         except ImportError:
-            raise ImportError("anthropic package not installed. Run: pip install anthropic")
+            logger.error("Anthropic library not installed. Run pip install -r requirements.txt")
+            self._client = None
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize Anthropic client: {e}")
+            logger.error(f"Failed to initialize Anthropic client: {e}")
+            self._client = None
 
     def set_api_key(self, api_key: str):
         """Set or update the API key."""
