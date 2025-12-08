@@ -33,7 +33,10 @@ logger = logging.getLogger(__name__)
 # System prompt for Claude pun analysis
 PUN_ANALYSIS_PROMPT = """You are a linguistic expert specializing in pun identification and analysis.
 
-Your task is to analyze a sentence and identify any puns it contains. For each pun found, provide:
+Your task is to analyze a sentence and identify any puns it contains. 
+What we are looking for here are multiple interpretations for one or more words.
+
+For each pun found, provide:
 
 1. The word or expression that creates the pun
 2. The type of pun:
